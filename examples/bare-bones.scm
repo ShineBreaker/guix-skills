@@ -1,0 +1,78 @@
+;; This is an operating system configuration template for a "bare bones"
+;; setup, with no X11 display server.
+
+(use-modules (gnu)
+             (guix utils)
+             (nonguix)
+             (gnu services networking)
+             (gnu services ssh)
+             (gnu packages screen)
+             (gnu packages ssh))
+
+(define guix-channels (include "./channels.lock"))
+
+(define %my-os
+  (operating-system
+    (host-name "komputilo")
+    (timezone "Europe/Berlin")
+    (locale "en_US.utf8")
+
+    (kernel linux)
+    (firmware (cons* linux-firmware %base-firmware))
+
+    ;; Boot in "legacy" BIOS mode, assuming /dev/sdX is the
+    ;; target hard disk, and "my-root" is the label of the target
+    ;; root file system.
+    (bootloader (bootloader-configuration
+                  (bootloader grub-bootloader)
+                  (targets '("/dev/sdX"))))
+    ;; It's fitting to support the equally bare bones ‘-nographic’
+    ;; QEMU option, which also nicely sidesteps forcing QWERTY.
+    (kernel-arguments (list "console=ttyS0,115200"))
+    (file-systems (cons (file-system
+                          (device (file-system-label "my-root"))
+                          (mount-point "/")
+                          (type "ext4"))
+                        %base-file-systems))
+
+    ;; This is where user accounts are specified.  The "root"
+    ;; account is implicit, and is initially created with the
+    ;; empty password.
+    (users (cons (user-account
+                   (name "alice")
+                   (comment "Bob's sister")
+                   (group "users")
+
+                   ;; Adding the account to the "wheel" group
+                   ;; makes it a sudoer.  Adding it to "audio"
+                   ;; and "video" allows the user to play sound
+                   ;; and access the webcam.
+                   (supplementary-groups '("wheel" "audio" "video")))
+                 %base-user-accounts))
+
+    ;; Globally-installed packages.
+    (packages (cons screen %base-packages))
+
+    ;; Add services to the baseline: a DHCP client and an SSH
+    ;; server.  You may wish to add an NTP service here.
+    ;; 在这里添加了一些用于利用 guix time-machine 来锁定 channel 的功能
+    ;; 具体的原理其实就是让 channel 指向一个固定了 commit 的新文件，从而避免 channel 被更新
+    ;; 利用 guix time-machine --channel ./channels.scm -- describe --format=channels ./channels.lock 来生成锁文件
+    ;; 推荐利用包装器 ( 比如说 `just` 来自动化这一个流程)
+    (services (append (list
+      (simple-service 'home-channels home-channels-service-type
+                      guix-channels)
+      (service dhcpcd-service-type)
+      (service openssh-service-type
+        (openssh-configuration
+          (openssh openssh-sans-x)
+          (port-number 2222))))
+     (modify-services %base-services
+       (guix-service-type config =>
+                          (guix-configuration (inherit config)
+                                             (channels guix-channels)
+                                             (guix (guix-for-channels
+                                                    guix-channels))))))))
+
+((compose (nonguix-transformation-guix))
+ %my-os)

@@ -1,0 +1,108 @@
+;; This is an operating system configuration template for a "desktop" setup
+;; with GNOME and Xfce where the root partition is encrypted with LUKS, and a
+;; swap file.
+
+(use-modules (gnu)
+             (guix utils)
+             (nonguix)
+             (gnu system nss)
+             (gnu services desktop)
+             (gnu services sddm)
+             (gnu services xorg)
+             (gnu packages gnome))
+
+(define guix-channels (include "./channels.lock"))
+
+(define %my-os
+  (operating-system
+    (host-name "antelope")
+    (timezone "Europe/Paris")
+    (locale "en_US.utf8")
+
+    (kernel linux)
+    (firmware (cons* linux-firmware %base-firmware))
+
+    ;; Choose US English keyboard layout.  The "altgr-intl"
+    ;; variant provides dead keys for accented characters.
+    (keyboard-layout (keyboard-layout "us" "altgr-intl"))
+
+    ;; Use the UEFI variant of GRUB with the EFI System
+    ;; Partition mounted on /boot/efi.
+    (bootloader (bootloader-configuration
+                  (bootloader grub-efi-bootloader)
+                  (targets '("/boot/efi"))
+                  (keyboard-layout keyboard-layout)))
+
+    ;; Specify a mapped device for the encrypted root partition.
+    ;; The UUID is that returned by 'cryptsetup luksUUID'.
+    (mapped-devices
+     (list (mapped-device
+             (source (uuid "12345678-1234-1234-1234-123456789abc"))
+             (target "my-root")
+             (type luks-device-mapping))))
+
+    (file-systems (append
+                   (list (file-system
+                           (device (file-system-label "my-root"))
+                           (mount-point "/")
+                           (type "ext4")
+                           (dependencies mapped-devices))
+                         (file-system
+                           (device (uuid "1234-ABCD" 'fat))
+                           (mount-point "/boot/efi")
+                           (type "vfat")))
+                   %base-file-systems))
+
+    ;; Specify a swap file for the system, which resides on the
+    ;; root file system.
+    (swap-devices (list (swap-space
+                          (target "/swapfile"))))
+
+    ;; Create user `bob' with `alice' as its initial password.
+    (users (cons (user-account
+                   (name "bob")
+                   (comment "Alice's brother")
+                   (password (crypt "alice" "$6$abc"))
+                   (group "students")
+                   (supplementary-groups '("wheel" "netdev" "audio" "video")))
+                 %base-user-accounts))
+
+    ;; Add the `students' group
+    (groups (cons* (user-group
+                     (name "students"))
+                   %base-groups))
+
+    ;; This is where we specify system-wide packages.
+    (packages (append (list
+                       ;; force user mounts
+                       gvfs)
+                      %base-packages))
+
+    ;; Add GNOME and Xfce---we can choose at the log-in screen
+    ;; by clicking the gear.  Use the "desktop" services, which
+    ;; include the X11 log-in service, networking with
+    ;; NetworkManager, and more.
+    ;; 在这里添加了一些用于利用 guix time-machine 来锁定 channel 的功能
+    ;; 具体的原理其实就是让 channel 指向一个固定了 commit 的新文件，从而避免 channel 被更新
+    ;; 利用 guix time-machine --channel ./channels.scm -- describe --format=channels ./channels.lock 来生成锁文件
+    ;; 推荐利用包装器 ( 比如说 `just` 来自动化这一个流程)
+    (services (append (list
+      (simple-service 'home-channels home-channels-service-type
+                      guix-channels)
+      (service gnome-desktop-service-type)
+      (service xfce-desktop-service-type)
+      (set-xorg-configuration
+        (xorg-configuration
+          (keyboard-layout keyboard-layout))))
+     (modify-services %desktop-services
+       (guix-service-type config =>
+                          (guix-configuration (inherit config)
+                                             (channels guix-channels)
+                                             (guix (guix-for-channels
+                                                    guix-channels)))))))
+
+    ;; Allow resolution of '.local' host names with mDNS.
+    (name-service-switch %mdns-host-lookup-nss)))
+
+((compose (nonguix-transformation-guix))
+ %my-os)
