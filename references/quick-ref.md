@@ -1,15 +1,5 @@
 ## Quick Reference
 
-### Example Files
-
-| File                       | Purpose                                                       |
-| -------------------------- | ------------------------------------------------------------- |
-| `examples/channel.scm`     | Channel definitions with nonguix (+ optional desktop channel) |
-| `examples/bare-bones.scm`  | Minimal headless/server config                                |
-| `examples/desktop.scm`     | GNOME + Xfce with LUKS encryption                             |
-| `examples/desktop-kde.scm` | KDE Plasma (common beginner choice)                           |
-| `examples/home-config.scm` | Guix Home user configuration                                  |
-
 ### Essential Commands
 
 ```bash

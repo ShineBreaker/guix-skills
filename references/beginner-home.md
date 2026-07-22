@@ -57,6 +57,8 @@ The swap file resides on the encrypted root filesystem, so it's automatically en
 - The initrd will prompt for the LUKS passphrase at boot
 - Consider using a keyfile for automatic decryption (advanced)
 
+> **Done when:** `mapped-devices` has a `luks-device-mapping`, the root `file-system` declares `(dependencies mapped-devices)`, and `/boot/efi` is unencrypted.
+
 ## Section 10: Guix Home — User-Level Configuration
 
 ### What is Guix Home?
@@ -122,6 +124,8 @@ guix home list-generations
 
 Both can install packages. Use system config for system-wide tools, home config for personal preferences.
 
+> **Done when:** the `home-environment` has `packages` and `services`, and `guix home reconfigure` succeeds.
+
 `reference:` https://guix.gnu.org/manual/en/html_node/Home-Configuration.html
 
 ## Section 10.5: Channel Configuration & `guix time-machine` (Reproducibility)
@@ -184,7 +188,7 @@ This creates `channels.lock` with exact commit hashes for all channels. Use a ta
 
 ### Use Locked Channels in Your Config
 
-All example configs use this pattern. Reference `examples/desktop-kde.scm`:
+All example configs use this pattern. Reference `examples/desktop.scm`:
 
 ```scheme
 ;; Load locked channels
@@ -206,5 +210,7 @@ All example configs use this pattern. Reference `examples/desktop-kde.scm`:
 ```
 
 **This ensures both system and user guix use identical pinned channels.**
+
+> **Done when:** `source/channel.lock` exists, the config `(include …)`s it, and both `guix-service-type` and `home-channels-service-type` reference the locked channels.
 
 `reference:` https://guix.gnu.org/manual/en/html_node/Channels.html and https://guix.gnu.org/manual/en/html_node/Invoking-guix.html (search "time-machine").

@@ -1,8 +1,9 @@
 ;; WARNING: This is a START-ONLY TEMPLATE for new contributors, NOT the
 ;; current state of your own config repo's live config (e.g. source/config.org / config.scm).
+;; (The current ISO in the author's repo is XFCE + lightdm + labwc, NOT KDE.)
 ;; Read source/config.org before applying any pattern from this file.
 ;; This is an operating system configuration template for a "desktop" setup
-;; with GNOME and Xfce where the root partition is encrypted with LUKS, and a
+;; with KDE where the root partition is encrypted with LUKS, and a
 ;; swap file.
 
 (use-modules (gnu)
@@ -65,12 +66,17 @@
     (users (cons (user-account
                    (name "bob")
                    (comment "Alice's brother")
+                   ;; 注意： 这样写的话会导致非常严重的安全问题，尤其是当你打算把 config 上传到 Github 等 Git托管的时候
+                   ;; 所以仅适用于设置一个固定的默认密码，防止进入系统之后无法进入账户。
+                   ;; 可以利用 `echo "你的密码" | guix shell openssl -- openssl passwd -6 -stdin`
+                   ;; 来生成一个 hash 化的密码，然后将下面一行直接改成 "(password "刚刚生成的密码")" 即可
                    (password (crypt "alice" "$6$abc"))
                    (group "students")
                    (supplementary-groups '("wheel" "netdev" "audio" "video")))
                  %base-user-accounts))
 
-    ;; Add the `students' group
+    ;; 添加 groups 的步骤，通常情况下你不会需要这个，但是必须得有
+    ;;     (groups (cons* %base-groups))
     (groups (cons* (user-group
                      (name "students"))
                    %base-groups))
@@ -81,10 +87,7 @@
                        gvfs)
                       %base-packages))
 
-    ;; Add GNOME and Xfce---we can choose at the log-in screen
-    ;; by clicking the gear.  Use the "desktop" services, which
-    ;; include the X11 log-in service, networking with
-    ;; NetworkManager, and more.
+    ;; 使用 KDE Plasma 作为桌面环境 ( KDE 的操作习惯更加贴近 Windows )
     ;; 在这里添加了一些用于利用 guix time-machine 来锁定 channel 的功能
     ;; 具体的原理其实就是让 channel 指向一个固定了 commit 的新文件，从而避免 channel 被更新
     ;; 利用 guix time-machine --channel ./channels.scm -- describe --format=channels ./channels.lock 来生成锁文件
@@ -92,11 +95,7 @@
     (services (append (list
       (simple-service 'home-channels home-channels-service-type
                       guix-channels)
-      (service gnome-desktop-service-type)
-      (service xfce-desktop-service-type)
-      (set-xorg-configuration
-        (xorg-configuration
-          (keyboard-layout keyboard-layout))))
+      (service plasma-desktop-service-type))
      (modify-services %desktop-services
        (guix-service-type config =>
                           (guix-configuration (inherit config)

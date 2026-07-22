@@ -46,6 +46,8 @@ This downloads the nonguix channel which provides:
 
 `reference:` https://gitlab.com/nonguix/nonguix — nonguix project README and channel introduction.
 
+> **Done when:** `~/.config/guix/channels.scm` exists and `guix pull` succeeds.
+
 ## Section 2: Essential System Configuration (Nonguix Foundation)
 
 Every Guix System configuration for modern hardware MUST include these nonguix components. Reference `examples/bare-bones.scm`.
@@ -100,6 +102,8 @@ Wrap your operating-system definition with the nonguix transformation:
 This applies necessary transformations to packages for compatibility with non-free components.
 
 `reference:` https://guix.gnu.org/manual/en/html_node/operating-system-Reference.html — full `operating-system` record reference.
+
+> **Done when:** the OS record has `(kernel linux)`, `(initrd microcode-initrd)`, and `(firmware (cons* linux-firmware %base-firmware))`.
 
 ## Section 3: Bootloader Configuration
 
@@ -264,7 +268,7 @@ Then run `passwd` after first login.
 - SDDM display manager works well with NVIDIA
 - Comprehensive settings GUI
 
-Reference `examples/desktop-kde.scm`:
+Reference `examples/desktop.scm`:
 
 ```scheme
 (use-modules (gnu services desktop)
@@ -361,6 +365,8 @@ Reference `examples/bare-bones.scm`:
 - `%desktop-services`: Full desktop (X11/Wayland, NetworkManager, Bluetooth, etc.)
 
 `reference:` https://guix.gnu.org/manual/en/html_node/Desktop-Services.html — full desktop service list.
+
+> **Done when:** the OS record has a desktop service set (`%desktop-services` or `%base-services`), a display manager, and the user's preferred DE/WM.
 
 ## Section 7: GPU Configuration (NVIDIA + AMD + Intel)
 
@@ -516,6 +522,8 @@ prime-run firefox
 
 `reference:` https://gitlab.com/nonguix/nonguix — search "NVIDIA driver" in the project README.
 
+> **Done when:** the OS record has the correct kernel+firmware for the user's GPU, and the nonguix transformation (if NVIDIA) is applied with the right driver version.
+
 ## Section 8: Networking Hardware (WiFi + Ethernet + Bluetooth)
 
 ### Intel WiFi (Most Common)
@@ -603,6 +611,8 @@ iwlist scan
 # Check Bluetooth status
 bluetoothctl
 ```
+
+> **Done when:** the firmware list includes the user's WiFi/BT chipset driver, and `rfkill list` shows no soft/hard blocks after boot.
 
 ## Section 8.5: Audio Configuration
 

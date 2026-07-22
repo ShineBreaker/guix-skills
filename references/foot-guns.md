@@ -128,8 +128,7 @@ live config — check each file's header for the WARNING line.
 | File                       | What it demonstrates                                                             |
 | -------------------------- | -------------------------------------------------------------------------------- |
 | `examples/bare-bones.scm`  | Minimal headless/server: dhcpcd + openssh + nonguix transformation               |
-| `examples/desktop.scm`     | GNOME + Xfce + LUKS-encrypted root + swap-file + hostname resolution             |
-| `examples/desktop-kde.scm` | KDE Plasma + LUKS (a common beginner choice)                                     |
+| `examples/desktop.scm`     | KDE Plasma + LUKS (a common beginner choice)                                     |
 | `examples/home-config.scm` | `home-environment` shape: bash aliases + minimal packages                        |
 | `examples/channel.scm`     | Channel declarations with nonguix (+ optionally a desktop channel) introductions |
 
