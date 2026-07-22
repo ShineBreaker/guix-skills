@@ -1,3 +1,6 @@
+;; WARNING: This is a START-ONLY TEMPLATE for new contributors, NOT the
+;; current state of your own config repo's live config (e.g. source/config.org / config.scm).
+;; Read source/config.org before applying any pattern from this file.
 ;; 这是一个基本的Guix Home配置示例
 
 (use-modules (gnu home)
