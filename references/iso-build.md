@@ -1,11 +1,6 @@
 ## Section 16: Building a Live / install ISO
 
-A self-authored Live ISO is built with `guix system image` (the `image` type,
-e.g. `iso9660`). Many config repos wrap this behind a task-runner subcommand
-such as `blue build-iso`. **The `image` path only builds — it never mutates the
-running system — so it does NOT need sudo** (verified in practice: built twice
-with no sudo). This is in contrast to `guix system reconfigure`, which does
-require root.
+A self-authored Live ISO is built with `guix system image` (the `image` type, e.g. `iso9660`). Many config repos wrap this behind a task-runner subcommand such as `blue build-iso`. **The `image` path only builds — it never mutates the running system — so it does NOT need sudo** (verified in practice: built twice with no sudo). This is in contrast to `guix system reconfigure`, which does require root.
 
 ```bash
 # Via a task runner (background-safe, 30+ min; no sudo)
@@ -19,14 +14,11 @@ guix time-machine --channels=source/channel.lock -- repl -- \
   tmp/live-iso.scm --image-type=iso9660 2>&1 | tee /tmp/iso-build.log
 ```
 
-> The repo-specific command list and `live-installation-os` entry points for
-> one concrete repo are in `repo-guix-configs-example.md`.
+> The repo-specific command list and `live-installation-os` entry points for one concrete repo are in `repo-guix-configs-example.md`.
 
 ### 16.1 Module-attribution trap
 
-`make-installation-os` lives in guix core's `(gnu system install)`, **not** in a
-third-party channel's file-systems module. The ISO's live-modules block must
-`(use-modules (gnu system install) …)`:
+`make-installation-os` lives in guix core's `(gnu system install)`, **not** in a third-party channel's file-systems module. The ISO's live-modules block must `(use-modules (gnu system install) …)`:
 
 ```scheme
 ;; CORRECT
@@ -36,18 +28,13 @@ third-party channel's file-systems module. The ISO's live-modules block must
 (use-modules (some-channel services file-systems) …)
 ```
 
-`%installation-services` already enables `kmscon` on tty1 (with
-`login-program installer`). Don't add `(service kmscon-service-type …)`
-redundantly; don't write `(delete kmscon-service-type)` and think it's
-"disabling" it — both are no-ops for already-default-true (or absent) entries.
+`%installation-services` already enables `kmscon` on tty1 (with `login-program installer`). Don't add `(service kmscon-service-type …)` redundantly; don't write `(delete kmscon-service-type)` and think it's "disabling" it — both are no-ops for already-default-true (or absent) entries.
 
-To confirm the symbol's home in your locked guix commit:
-`grep -n 'make-installation-os' $(guix describe --format=channels | grep -A1 guix | …)`.
+To confirm the symbol's home in your locked guix commit: `grep -n 'make-installation-os' $(guix describe --format=channels | grep -A1 guix | …)`.
 
 ### 16.2 ISO autologin (lightdm/xfce example)
 
-For an ISO that boots into a desktop, `lightdm-configuration` needs the seat set
-consistently:
+For an ISO that boots into a desktop, `lightdm-configuration` needs the seat set consistently:
 
 ```scheme
 (seat-configuration
@@ -55,14 +42,11 @@ consistently:
   (user-session "xfce"))          ; bare name, no .desktop suffix
 ```
 
-…and a top-level `(allow-empty-passwords? #t)` on `lightdm-configuration` itself
-when the auto-login user has `(password "")`.
+…and a top-level `(allow-empty-passwords? #t)` on `lightdm-configuration` itself when the auto-login user has `(password "")`.
 
 ### 16.3 The `with-imported-modules` rule
 
-If you write an ISO-time package with `trivial-build-system` whose gexp-builder
-uses `(guix build utils)` (for `mkdir-p`, `call-with-output-file`, etc.), wrap
-the gexp in `with-imported-modules`:
+If you write an ISO-time package with `trivial-build-system` whose gexp-builder uses `(guix build utils)` (for `mkdir-p`, `call-with-output-file`, etc.), wrap the gexp in `with-imported-modules`:
 
 ```scheme
 (arguments
@@ -73,10 +57,7 @@ the gexp in `with-imported-modules`:
          …))))
 ```
 
-Without it, `trivial-build-system` does not import `(guix build utils)` into the
-build sandbox, and the drv fails with `no code for module (guix build utils)`.
-Note `with-imported-modules` adds a layer — balance the extra closing paren or
-the bracket check will report one too many open parens.
+Without it, `trivial-build-system` does not import `(guix build utils)` into the build sandbox, and the drv fails with `no code for module (guix build utils)`. Note `with-imported-modules` adds a layer — balance the extra closing paren or the bracket check will report one too many open parens.
 
 ### 16.4 Verified ISO pitfalls (real build debugging)
 

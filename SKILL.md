@@ -36,11 +36,9 @@ The material is split into three tiers; the map below tells you which `reference
 
 ## Rules you must not skip (config repos + Guix)
 
-These are the highest-leverage invariants. Read them before acting on a config
-repo's source or running its runner.
+These are the highest-leverage invariants. Read them before acting on a config repo's source or running its runner.
 
-1. **Never run a system reconfigure unattended.** `guix system reconfigure` / a runner's `rebuild` need sudo and will hang a non-interactive session on a password prompt. Agent-safe set: the runner's `check` / `lint`, `home`, `stow`/`dotfiles`, and `build-iso` / `guix system image` (the image path
-   **does not** need sudo — it only builds, never mutates the live system). Ask a human to run the sudo-gated ones.
+1. **Never run a system reconfigure unattended.** `guix system reconfigure` / a runner's `rebuild` need sudo and will hang a non-interactive session on a password prompt. Agent-safe set: the runner's `check` / `lint`, `home`, `stow`/`dotfiles`, and `build-iso` / `guix system image` (the image path **does not** need sudo — it only builds, never mutates the live system). Ask a human to run the sudo-gated ones.
 2. **Run the runner from the repo root.** A `blue`-style runner discovers its config from the cwd; running it from a subdir/submodule fails with a misleading "no such command".
 3. **Edit source, then verify the deployment picked it up.** Live `~/.config/<app>/<file>` is a symlink to a store copy (immutable track) or to the repo source (mutable track) — never edit the live file. After the home step, `md5sum` the source vs `~/.config/…` (or `readlink`) to confirm the store hash moved. (See `references/dotfiles-general.md`.)
 4. **The lint step is a paren smoke test, not a validator.** It misses locally misplaced parens, wrong field names, and wrong module paths. For semantics, probe the record type with `guix time-machine -C channel.lock -- repl` (see `references/blue-runner.md`).
@@ -48,8 +46,7 @@ repo's source or running its runner.
 
 ## The `blue` task runner — a reusable pattern
 
-`blue` names the runner used by one popular config-repo family, but the _pattern_ (one CLI wrapping `guix` for tangle/lint/home/image/stow, with a built-in sudo boundary) is repository-agnostic. Read
-`references/blue-runner.md` for the convention and "how to adopt it in your own repo"; `references/repo-guix-configs-example.md` shows one concrete instance.
+`blue` names the runner used by one popular config-repo family, but the _pattern_ (one CLI wrapping `guix` for tangle/lint/home/image/stow, with a built-in sudo boundary) is repository-agnostic. Read `references/blue-runner.md` for the convention and "how to adopt it in your own repo"; `references/repo-guix-configs-example.md` shows one concrete instance.
 
 ## Self-contained provenance
 

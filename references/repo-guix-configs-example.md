@@ -1,13 +1,8 @@
 # Concrete instance — the `Guix-configs` family of repos
 
-This file documents **one specific** repository that follows the `blue` pattern
-(`blueprint.scm` + `source/config.org` + dual-track dotfiles). It is an
-_example_, not a prescription — other repos implement the same ideas
-differently. Read `blue-runner.md` and `dotfiles-general.md` first for the
-generic pattern; this is the "here's how one real repo does it" companion.
+This file documents **one specific** repository that follows the `blue` pattern (`blueprint.scm` + `source/config.org` + dual-track dotfiles). It is an _example_, not a prescription — other repos implement the same ideas differently. Read `blue-runner.md` and `dotfiles-general.md` first for the generic pattern; this is the "here's how one real repo does it" companion.
 
-> Paths below use `~/Projects/Config/Guix-configs` as the concrete checkout.
-> Substitute your own checkout path wherever you see it.
+> Paths below use `~/Projects/Config/Guix-configs` as the concrete checkout. Substitute your own checkout path wherever you see it.
 
 ## The `blue` subcommand set (this repo)
 
@@ -26,18 +21,13 @@ blue structor [path]   # regenerate AGENTS.md directory-tree sections
 blue stow <pkg>        # reconcile a dotfiles/mutable/<pkg> via GNU Stow
 ```
 
-Agent rule (see `blue-runner.md`): never run `blue rebuild` unattended;
-`check` / `home` / `stow` / `build-iso` are agent-safe.
+Agent rule (see `blue-runner.md`): never run `blue rebuild` unattended; `check` / `home` / `stow` / `build-iso` are agent-safe.
 
 ## Source: `source/config.org` (Org + Noweb tangle)
 
-The single `config.scm` is split across 100+ `#+begin_src scheme` blocks with
-`<<ref>>` Noweb includes. `blue check` runs `org-babel-tangle-file` plus a
-bracket-balance check. The bracket check is a smoke test only — see
-`blue-runner.md` for what it misses and the `guix repl` probe alternative.
+The single `config.scm` is split across 100+ `#+begin_src scheme` blocks with `<<ref>>` Noweb includes. `blue check` runs `org-babel-tangle-file` plus a bracket-balance check. The bracket check is a smoke test only — see `blue-runner.md` for what it misses and the `guix repl` probe alternative.
 
-Run `blue check` from the **repo root** before any commit that touches
-`config.org`.
+Run `blue check` from the **repo root** before any commit that touches `config.org`.
 
 ## Dotfiles dual-track (this repo's directories)
 
@@ -46,8 +36,7 @@ Run `blue check` from the **repo root** before any commit that touches
 | Immutable | `dotfiles/immutable/<app>/` | Guix Home `home-dotfiles-service-type` (stow) → `/gnu/store/<hash>` copy symlinked to `$HOME` | `blue home` rebuilds the symlink  |
 | Mutable   | `dotfiles/mutable/<pkg>/`   | GNU Stow directly (`blue stow <pkg>`)                                                         | edit-and-go (symlink is the file) |
 
-The dotfile service hierarchy lives in the `dotfile-services` block of
-`config.org`:
+The dotfile service hierarchy lives in the `dotfile-services` block of `config.org`:
 
 ```scheme
 (service home-dotfiles-service-type
@@ -59,11 +48,9 @@ The dotfile service hierarchy lives in the `dotfile-services` block of
    (excluded '("\\.agents/workfile($|/.*)" ...))))
 ```
 
-Add a package → add its name to `packages`; remove one → remove from `packages`
-**and** `git rm` the directory; both need `blue home` to take effect.
+Add a package → add its name to `packages`; remove one → remove from `packages` **and** `git rm` the directory; both need `blue home` to take effect.
 
-For a single-file deploy, use `home-files-service-type` with
-`computed-substitution-with-inputs`:
+For a single-file deploy, use `home-files-service-type` with `computed-substitution-with-inputs`:
 
 ```scheme
 (".local/share/gnupg/gpg-agent.conf" ,(computed-substitution-with-inputs
@@ -83,24 +70,14 @@ herd status hermes             # user service (no sudo — agents may run)
 
 Two gotchas specific to home-shepherd:
 
-1. **Cached PID is not authoritative.** `make-forkexec-constructor` doesn't
-   `wait` for its child; if the service dies, shepherd still caches the old
-   PID. Truth lives in `/var/log/messages` and `/proc/<pid>/cmdline`.
-2. **home-shepherd does not inherit `WAYLAND_DISPLAY`.** Services that talk to
-   wayland clients must dynamically discover `$XDG_RUNTIME_DIR/wayland-*` at
-   start — don't hard-code it.
+1. **Cached PID is not authoritative.** `make-forkexec-constructor` doesn't `wait` for its child; if the service dies, shepherd still caches the old PID. Truth lives in `/var/log/messages` and `/proc/<pid>/cmdline`.
+2. **home-shepherd does not inherit `WAYLAND_DISPLAY`.** Services that talk to wayland clients must dynamically discover `$XDG_RUNTIME_DIR/wayland-*` at start — don't hard-code it.
 
-After editing a service definition: `blue home` does **not** restart an
-already-running home-shepherd, so also `herd restart <service>` and check the
-`命令:` line in `herd status`. If it doesn't update, you may have two
-home-shepherd daemons — `pgrep -af "shepherd-for-home"` ( >1 PID = parallel),
-kill the older one, then restart.
+After editing a service definition: `blue home` does **not** restart an already-running home-shepherd, so also `herd restart <service>` and check the `命令:` line in `herd status`. If it doesn't update, you may have two home-shepherd daemons — `pgrep -af "shepherd-for-home"` ( >1 PID = parallel), kill the older one, then restart.
 
 ### Daemon config path injection (`$$bin/...$$`)
 
-Daemon configs must not rely on `$HOME` expansion at load time. Use absolute
-store paths via `computed-substitution-with-inputs`, or this repo's
-`$$bin/x$$` syntax (expanded by the build system):
+Daemon configs must not rely on `$HOME` expansion at load time. Use absolute store paths via `computed-substitution-with-inputs`, or this repo's `$$bin/x$$` syntax (expanded by the build system):
 
 ```scheme
 ;; WRONG — relies on $HOME expansion at unknown time
@@ -125,24 +102,15 @@ Secrets are encrypted with `age`, stored in-tree; private keys live out-of-tree.
 ~/.local/share/secrets-decrypted/<name>   # decrypted plaintext (NOT in git)
 ```
 
-The helper `tools/secrets` has `encrypt / decrypt / edit / show / list /
-recipients`. Plaintext target is `~/.local/share/secrets-decrypted/`, **never**
-`~/.config/` (which the dotfile service would overwrite/deploy).
+The helper `tools/secrets` has `encrypt / decrypt / edit / show / list / recipients`. Plaintext target is `~/.local/share/secrets-decrypted/`, **never** `~/.config/` (which the dotfile service would overwrite/deploy).
 
-`.gitignore`: exclude `.keys/` wholesale, then un-ignore
-`!dotfiles/secrets/.keys/*.pub` so the public key ships. Verify with
-`git check-ignore -v <path>` both ways. Add the `age` package to the
-user-packages list (`gnu/packages/golang-crypto.scm`).
+`.gitignore`: exclude `.keys/` wholesale, then un-ignore `!dotfiles/secrets/.keys/*.pub` so the public key ships. Verify with `git check-ignore -v <path>` both ways. Add the `age` package to the user-packages list (`gnu/packages/golang-crypto.scm`).
 
-> This is one repo's convention. The general "encrypt secrets with `age`, keep
-> the private key out of git, decrypt to a non-deployed path" approach applies
-> anywhere; adapt the directory names to your own layout.
+> This is one repo's convention. The general "encrypt secrets with `age`, keep the private key out of git, decrypt to a non-deployed path" approach applies anywhere; adapt the directory names to your own layout.
 
 ## Live ISO build (this repo's entry points)
 
-The ISO is generated from `tools/build-image.scm` (or `scripts/build-image.scm`),
-building the OS described by a separate `live-installation-os` block. Run it
-via the task runner (no sudo, background-safe):
+The ISO is generated from `tools/build-image.scm` (or `scripts/build-image.scm`), building the OS described by a separate `live-installation-os` block. Run it via the task runner (no sudo, background-safe):
 
 ```bash
 cd ~/Projects/Config/Guix-configs
@@ -158,13 +126,8 @@ guix time-machine --channels=source/channel.lock -- repl -- \
   tmp/live-iso.scm --image-type=iso9660 2>&1 | tee /tmp/iso-build.log
 ```
 
-The generic pitfalls for building a live ISO with `guix system image` live in
-`iso-build.md` (module attribution, kmscon, slim, `with-imported-modules`).
+The generic pitfalls for building a live ISO with `guix system image` live in `iso-build.md` (module attribution, kmscon, slim, `with-imported-modules`).
 
 ## Channels (this repo's set, as an example)
 
-This repo pins guix + nonguix + rosenthal (and historically bluebox/jeans).
-Define them in `source/channel.scm`, generate `source/channel.lock` via
-`guix time-machine --channel ./channels.scm -- describe --format=channels >
-./channels.lock`, and `(include "./channels.lock")` from the config. The
-generic "why lock channels" rationale is in `beginner-home.md` §10.5.
+This repo pins guix + nonguix + rosenthal (and historically bluebox/jeans). Define them in `source/channel.scm`, generate `source/channel.lock` via `guix time-machine --channel ./channels.scm -- describe --format=channels > ./channels.lock`, and `(include "./channels.lock")` from the config. The generic "why lock channels" rationale is in `beginner-home.md` §10.5.
