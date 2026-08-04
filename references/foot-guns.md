@@ -213,3 +213,56 @@ Fix: keep the routing in the **generic `portals.conf`** so both frontends load i
 One merge detail: the **niri package itself** ships a `niri-portals.conf` into `XDG_DATA_DIRS` (`<niri-store>/share/xdg-desktop-portal/niri-portals.conf`) with `default=gnome;gtk` + Access/Notification/Secret but **no `Settings=` line**, so the user `portals.conf`'s `Settings=darkman` still wins on the niri bus (verified). If a future niri release adds a `Settings=` line there, it would override the user file on the niri bus — re-check that file if Flatpak theming breaks again after a niri update.
 
 _Verified 2026-07-29 on niri 26.04 / xdg-desktop-portal 1.20.3: home-bus ReadOne went rc=1 → `v u 1` after restoring generic `portals.conf`; the portal tracked a live darkman mode toggle `v u 1 ↔ v u 2`._
+
+### 22.8 noctalia `(environ)` race: missing WAYLAND_DISPLAY in set-environment breaks Flatpak filechooser + screencast
+
+Rosenthal's `home-noctalia-service-type` starts noctalia with `#:environment-variables (environ)` — inheriting shepherd's **process-global** environment at fork time. `herd set-environment` (custom action on `graphical-session`) calls `putenv` on the shepherd process, so the update is visible to all subsequent `(environ)` calls. But `spawn-sh-at-startup` in config.kdl only fires once at niri boot.
+
+**The foot-gun:** if the set-environment line omits `WAYLAND_DISPLAY`, noctalia's env may lack it (niri's built-in propagation via `dbus-update-activation-environment` only affects D-Bus activation env, not shepherd's process env). Without `WAYLAND_DISPLAY`, gtk portal cannot create a filechooser window → Flatpak filechooser fails. If `DBUS_SESSION_BUS_ADDRESS` also points to the home bus (race: noctalia started before set-environment ran), gnome portal's screencast backend cannot find niri's Mutter ScreenCast API (registered only on niri's /tmp bus) → screencast fails too.
+
+**Symptoms:** Flatpak filechooser + screencast both broken simultaneously; native apps fine; `herd restart noctalia` fixes it (because by then putenv has run and shepherd global env is correct).
+
+**Fix:** include `WAYLAND_DISPLAY=$WAYLAND_DISPLAY` in the config.kdl `herd set-environment graphical-session ...` line. Combined with `spawn-sh-at-startup "herd restart noctalia"` (fires after set-environment), noctalia always gets the full correct env on niri boot.
+
+**Residual risk:** if `blue home` restarts noctalia mid-session AND shepherd's process-global env has been reset (shepherd process restart, rare), the race recurs. Mitigation: `herd restart noctalia` manually after such events.
+
+```bash
+# Verify noctalia's env points to niri's bus
+cat /proc/$(pgrep -x noctalia)/environ | tr '\0' '\n' | grep -E 'DBUS_SESSION|WAYLAND_DISPLAY'
+# Expect: DBUS_SESSION_BUS_ADDRESS=unix:path=/tmp/dbus-...  and  WAYLAND_DISPLAY=wayland-1
+# If DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus → wrong bus → restart noctalia
+```
+
+_Verified 2026-07-31: adding WAYLAND_DISPLAY to set-environment line; noctalia env confirmed correct after manual restart._
+
+### 22.9 `home-dotfiles-service-type` only reads git-staged content — unstaged edits silently ignored by `blue home`
+
+Guix Home's `home-dotfiles-service-type` (with `directories` pointing to a repo path) uses git-aware file acquisition internally. **Unstaged working-tree modifications are NOT included in the build** — `blue home` succeeds but deploys the old content from the git index.
+
+**The foot-gun:** edit a dotfile → `blue home` → symlink timestamp updates → but the deployed store copy still has the old content. No error, no warning. You think your fix is live but it isn't.
+
+**Fix:** always `git add <file>` before `blue home`. Verify with `grep <your-change> "$(readlink -f ~/.config/<path>)"` after deploy.
+
+```bash
+# After editing a dotfile:
+git add dotfiles/immutable/desktop/.config/niri/config.kdl
+blue home
+# Verify:
+grep 'YOUR_CHANGE' "$(readlink -f ~/.config/niri/config.kdl)"
+```
+
+_Verified 2026-07-31: first `blue home` after editing config.kdl deployed old content (no WAYLAND_DISPLAY); after `git add` + second `blue home`, new content appeared in store._
+
+### 22.10 Manual `herd set-environment` from a non-niri shell overwrites niri's bus address
+
+`herd set-environment graphical-session ... DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS` expands `$DBUS_SESSION_BUS_ADDRESS` in the **calling shell's** environment. If you run this from a TTY, SSH session, or any shell on `/run/user/1000/bus`, it overwrites shepherd's global env with the home bus address — destroying the correct `/tmp/dbus-XXXX` value that niri's `spawn-sh-at-startup` set.
+
+**The foot-gun:** after such a manual call, every subsequent `herd restart` of a graphical-session service (noctalia, hermes-backend, etc.) gives it the wrong bus → Flatpak filechooser + screencast break again.
+
+**Why spawn-sh-at-startup is safe:** it runs inside niri's process environment (created by `dbus-run-session`), so `$DBUS_SESSION_BUS_ADDRESS` expands to `/tmp/dbus-XXXX` automatically.
+
+**Recovery:** re-run set-environment with the explicit niri bus address (obtain from `cat /proc/$(pgrep -x niri)/environ | tr '\0' '\n' | grep DBUS_SESSION`), then `herd restart noctalia`.
+
+**Rule:** NEVER run `herd set-environment` manually unless you explicitly pass the niri bus address as a literal string — never via shell variable expansion from a non-niri shell.
+
+_Verified 2026-07-31: accidentally overwrote shepherd global env from home-bus shell; noctalia got /run/user/1000/bus; fixed by re-running with literal /tmp/dbus-okh26FqpoL address._
