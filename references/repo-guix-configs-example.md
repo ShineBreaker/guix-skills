@@ -99,10 +99,10 @@ Secrets are encrypted with `age`, stored in-tree; private keys live out-of-tree.
                                #   parallel to immutable/, NOT in dotfile-services
                                #   (else blue home would deploy it to ~/.config/secrets/)
   stow/secrets/.keys/age       # private key (NOT in git; stowed to ~/.keys/age)
-~/.local/share/secrets-decrypted/<name>   # decrypted plaintext (NOT in git)
+$XDG_RUNTIME_DIR/secrets-decrypted/<name>   # decrypted plaintext in tmpfs (NOT in git)
 ```
 
-The helper `tools/secrets` has `encrypt / decrypt / edit / show / list / recipients`. Plaintext target is `~/.local/share/secrets-decrypted/`, **never** `~/.config/` (which the dotfile service would overwrite/deploy).
+The helper `secrets` (entity at `dotfiles/mutable/tools/secrets/.local/bin/secrets`, stowed to `~/.local/bin`) has `encrypt / decrypt / edit / show / clip / get / env / set / rename / remove / clean / list / recipients`. Plaintext target is `$XDG_RUNTIME_DIR/secrets-decrypted/` (tmpfs), **never** `~/.config/` (which the dotfile service would overwrite/deploy).
 
 `.gitignore`: exclude `.keys/` wholesale, then un-ignore `!dotfiles/secrets/.keys/*.pub` so the public key ships. Verify with `git check-ignore -v <path>` both ways. Add the `age` package to the user-packages list (`gnu/packages/golang-crypto.scm`).
 

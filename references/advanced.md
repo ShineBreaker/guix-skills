@@ -24,7 +24,7 @@ A common, repo-portable pattern: encrypt secrets with [`age`](https://age-encryp
     age.pub            # in git; public key
     <name>.age         # in git; ciphertext
   <out-of-tree>/.keys/age   # private key (NOT in git)
-<user-data>/secrets-decrypted/<name>   # decrypted plaintext (NOT in git)
+$XDG_RUNTIME_DIR/secrets-decrypted/<name>   # decrypted plaintext in tmpfs (NOT in git)
 ```
 
 Hard rules that hold regardless of layout:
@@ -34,7 +34,7 @@ Hard rules that hold regardless of layout:
 - `.gitignore` must exclude the private key wholesale, then un-ignore the **public** key so it ships. Verify both directions with `git check-ignore -v <path>`.
 - Add the `age` package to the user-packages list so `age` is on PATH.
 
-A `tools/secrets`-style helper script (sub-commands `encrypt / decrypt / edit / show / list / recipients`) is a convenient wrapper; the decryption target should be a non-deployed user-data path.
+A `secrets`-style helper script (sub-commands `encrypt / decrypt / edit / show / clip / get / env / set / list / recipients`) is a convenient wrapper; the decryption target should be a non-deployed path, ideally tmpfs (`$XDG_RUNTIME_DIR`).
 
 > One concrete instance of this layout (with exact paths) is in `repo-guix-configs-example.md`.
 
