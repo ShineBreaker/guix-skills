@@ -2,7 +2,7 @@
 
 This file documents **one specific** repository that follows the `blue` pattern (`blueprint.scm` + `source/config.org` + dual-track dotfiles). It is an _example_, not a prescription — other repos implement the same ideas differently. Read `blue-runner.md` and `dotfiles-general.md` first for the generic pattern; this is the "here's how one real repo does it" companion.
 
-> Paths below use `~/Projects/Config/Guix-configs` as the concrete checkout. Substitute your own checkout path wherever you see it.
+> Paths below use `~/Projects/dotfiles/guix/Guix-configs` as the concrete checkout. Substitute your own checkout path wherever you see it.
 
 ## The `blue` subcommand set (this repo)
 
@@ -113,7 +113,7 @@ The helper `secrets` (entity at `dotfiles/mutable/tools/secrets/.local/bin/secre
 The ISO is generated from `tools/build-image.scm` (or `scripts/build-image.scm`), building the OS described by a separate `live-installation-os` block. Run it via the task runner (no sudo, background-safe):
 
 ```bash
-cd ~/Projects/Config/Guix-configs
+cd ~/Projects/dotfiles/guix/Guix-configs
 blue build-iso            # default variant
 blue build-iso xfce       # explicit variant
 ```
